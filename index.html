@@ -211,6 +211,14 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .gam .gr{display:grid;gap:2px;font-size:12px}
 .gam .ok{color:var(--good)}.gam .ng{color:var(--bad)}
 .gam .btn{justify-self:start}
+.fc{font-size:12px;line-height:1.55;background:rgba(143,180,255,.1);border:1px solid rgba(143,180,255,.35);border-radius:10px;padding:7px 10px;color:var(--text)}
+.fc b{color:#8fb4ff;margin-right:6px}
+.fc.bluff{border-color:rgba(255,125,105,.35);background:rgba(255,125,105,.08)}.fc.bluff b{color:var(--bad)}
+.opt .hot.nx{background:var(--wei)}
+.loy{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.loy .meter i{background:var(--good)}
+.loy b{font-size:13px}
+.loy small{grid-column:1/-1;font-size:11px}
 .gam.mou{border-color:rgba(99,217,160,.5);background:rgba(99,217,160,.06)}.gam.mou .gh b{color:var(--good)}
 .gam.kei{border-color:rgba(143,180,255,.55);background:rgba(143,180,255,.07)}.gam.kei .gh b{color:#8fb4ff}
 /* warlord cards */
@@ -287,7 +295,8 @@ const PLATS=[
  {id:'hh',n:'ポケットギア',sub:'携帯機',lic:1500,price:1,fit:['rpg','pzl','act'],from:0,mkt:m=>m<30?1.25:Math.max(.5,1.25-(m-30)*.025)},
  {id:'cs',n:'ドリームボックス',sub:'据置機',lic:3000,price:1.2,fit:['act','ftg','spt','rpg'],from:0,mkt:m=>m<30?1.35:Math.max(.55,1.35-(m-30)*.04)},
  {id:'ng',n:'ドリームボックスX',sub:'次世代機',lic:8000,price:1.4,fit:['act','stg','ftg','rpg'],from:30,mkt:m=>m<84?Math.min(1.9,.6+(m-30)*.08):Math.max(.6,1.9-(m-84)*.05)},
- {id:'zz',n:'ドリームボックスZ',sub:'新世代機',lic:15000,price:1.5,fit:['act','rpg','spt','slg'],from:84,mkt:m=>Math.min(2.2,.6+(m-84)*.08)}
+ {id:'zz',n:'ドリームボックスZ',sub:'新世代機',lic:15000,price:1.5,fit:['act','rpg','spt','slg'],from:84,mkt:m=>m<168?Math.min(2.2,.6+(m-84)*.08):Math.max(.6,2.2-(m-168)*.05)},
+ {id:'om',n:'ドリームボックスΩ',sub:'究極機',lic:25000,price:1.7,fit:['rpg','act','stg','slg','ftg'],from:168,mkt:m=>Math.min(2.6,.6+(m-168)*.08)}
 ];
 const PI=Object.fromEntries(PLATS.map(p=>[p.id,p]));
 const SCALES={
@@ -299,9 +308,9 @@ const SCALES={
 const OFFICES=[{n:'ガレージ',cap:3,rent:20,cost:0},{n:'雑居ビル',cap:5,rent:80,cost:1000},{n:'オフィスビル',cap:8,rent:250,cost:5000},{n:'自社ビル',cap:12,rent:600,cost:20000}];
 const ENGINE=[{n:'自社エンジン Lv1',cost:2000,b:.1},{n:'自社エンジン Lv2',cost:8000,b:.2},{n:'自社エンジン Lv3',cost:30000,b:.32}];
 const ADS=[{id:'sns',n:'SNS広告',cost:100,h:12},{id:'mag',n:'ゲーム雑誌の特集',cost:800,h:35},{id:'tv',n:'テレビCM',cost:5000,h:85}];
-let LEN_SEL=120;try{const v=localStorage.getItem('m3k-len');if(v==='60'||v==='120')LEN_SEL=+v;}catch(e){}
-const DIFF=[{n:'やさしい',q:1,h:1},{n:'ふつう',q:1.35,h:1.6},{n:'むずかしい',q:1.8,h:2.4}];let DIFF_SEL=1;
-try{const v=localStorage.getItem('m3k-diff');if(v!==null&&+v>=0&&+v<=2)DIFF_SEL=+v;}catch(e){}
+let LEN_SEL=120;try{const v=localStorage.getItem('m3k-len');if(v==='60'||v==='120'||v==='240')LEN_SEL=+v;}catch(e){}
+const DIFF=[{n:'やさしい',q:1,h:1},{n:'ふつう',q:1.35,h:1.6},{n:'むずかしい',q:1.8,h:2.4},{n:'修羅',q:2.3,h:3.3}];let DIFF_SEL=1;
+try{const v=localStorage.getItem('m3k-diff');if(v!==null&&+v>=0&&+v<=3)DIFF_SEL=+v;}catch(e){}
 const REVIEWERS=['ハマ田','関羽也','張飛美','孔明寺'];
 const FAM=['佐藤','鈴木','高橋','田中','伊藤','渡辺','山本','中村','小林','加藤','吉田','山田','松本','井上','木村','林','清水','山崎','森','池田','橋本','阿部','石川','前田','藤田','岡本','長谷川','村上'];
 const GIV=['翔','陽菜','蓮','美咲','大輝','結衣','悠真','さくら','拓海','葵','健太','七海','颯','莉子','亮','彩','誠','楓','航','遥','隼人','真央'];
@@ -474,11 +483,28 @@ Object.assign(GAMBLE,{
  魯粛:{kind:'kei',n:'同盟の計',p:.9,ds:'相手と共同キャンペーン、自社ファン+12%（相手も少し得をする）',df:'交渉決裂（効果なし）',ok:'手を結んだ共同キャンペーンが大成功！',ng:'交渉は決裂した',win(r){S.fans*=1.12;r.fans*=1.04;return `自社ファン +12%（${r.name} +4%）`;},lose(){return '効果なし';}}
 });
 const KIND={kuse:'諸刃の剣',mou:'秘策',kei:'計略'};
+const DLOY=()=>[0,0,5,10][S.diff??1];
+function loyOf(c){return S.loy?Math.round(S.loy[c]??60):60;}
+function setLoy(c,v){if(S.loy)S.loy[c]=clamp(v,0,100);}
+function addLoy(c,v){if(S.loy)setLoy(c,(S.loy[c]??60)+v);}
+function loyHTML(c,note){const v=loyOf(c),col=v>=75?'var(--good)':v>=40?'var(--gold)':'var(--bad)';return `<div class="loy"><span>忠誠</span><div class="meter"><i style="width:${v}%;background:${col}"></i></div><b class="num" style="color:${col}">${v}</b>${note?`<small>${note}</small>`:''}</div>`;}
+function loyMonth(){
+  if(!S.loy)return;
+  const mor=S.morale&&S.morale.until>S.m?S.morale.mul:1;
+  myCards().forEach(s=>{const c=s.card;let d=.8+(mor>1?1.5:mor<1?-1.5:0)+(S.short>0?-4:0)-(CARDS[c].trait?.5:0);
+    myCards().forEach(o=>{if(o===s)return;const r=rel(c,o.card);if(r&&r.v>0)d+=.5;if(r&&r.v<0)d-=1.5;});addLoy(c,d);});
+  S.rivals.forEach((r,i)=>{if(r.alive)rivalCards(i+1).forEach(c=>addLoy(c,r.cash<0?-3:.6));});
+  myCards().slice().forEach(s=>{const c=s.card;if(loyOf(c)>=25||R()>=.08+[0,0,.03,.06][S.diff??1])return;
+    const al=S.rivals.filter(x=>x.alive);S.staff=S.staff.filter(x=>x!==s);
+    if(al.length){const r=pick(al);S.own[c]=rco(r);setLoy(c,60);log(`忠誠心の薄れた${CARDS[c].name}が${r.name}へ去った`,'bad');info('社員の退職','quit',`${cardHead(c)}<p class="center">待遇に不満を募らせた<b>${CARDS[c].name}</b>が、${r.name}へ移っていきました。<br>褒美や昇給で、忠誠心を保ちましょう。</p>`);}
+    else{S.own[c]=-1;log(`${CARDS[c].name}が会社を去った`,'bad');}});
+}
+function rewardCost(s){return Math.max(100,Math.round(s.sal*2));}
 const myBest=()=>S.staff.filter(s=>!s.pres).sort((a,b)=>sumSt(b)-sumSt(a))[0];
 const RK={
  諸葛亮:r=>{S.fans*=.85;const f=Math.round(Math.max(0,S.cash)*.1);S.cash-=f;return `ファン -15%・資金 -${fmt(f)}`;},
  周瑜:r=>{if(!S.proj){const f=Math.round(Math.max(0,S.cash)*.12);S.cash-=f;return `資金 -${fmt(f)}`;}S.proj.pts=S.proj.pts.map(v=>v*.6);return `『${esc(S.proj.title)}』の開発ポイント -40%`;},
- 司馬懿:r=>{const st=myBest();if(!st){S.fans*=.9;return 'ファン -10%';}const nm=nameOf(st);S.staff=S.staff.filter(x=>x!==st);if(st.card!=null){S.own[st.card]=-1;S.mkt=[{c:st.card,int:rco(r)},...S.mkt.filter(x=>x.c!==st.card)];return `${nm}が離反して在野に（今月なら呼び戻せる）`;}return `${nm}が退職`;},
+ 司馬懿:r=>{const st=myBest();if(!st){S.fans*=.9;return 'ファン -10%';}const nm=nameOf(st);if(st.card!=null&&R()*100<loyOf(st.card)-20){addLoy(st.card,-5);return `${nm}は忠誠を貫き、離反しなかった（忠誠${loyOf(st.card)}）`;}S.staff=S.staff.filter(x=>x!==st);if(st.card!=null){S.own[st.card]=-1;S.mkt=[{c:st.card,int:rco(r)},...S.mkt.filter(x=>x.c!==st.card)];return `${nm}が離反して在野に（今月なら呼び戻せる）`;}return `${nm}が退職`;},
  賈詡:r=>{S.morale={mul:.85,until:S.m+4};return '3ヶ月 士気低下（開発力 -15%）';},
  龐統:r=>{if(!S.proj){S.fans*=.92;return 'ファン -8%';}S.proj.lq=(S.proj.lq||1)*.85;return '開発中の作品 完成度 -15%';},
  荀彧:r=>{S.fans*=.9;r.fans*=1.05;return 'ファン -10%';},
@@ -490,7 +516,7 @@ const RK={
  甘寧:r=>{const f=Math.round(Math.max(0,S.cash)*.1+300);S.cash-=f;return `資金 -${fmt(f)}`;}
 };
 function rivalSchemes(){
-  if(S.m<6)return;const rg=S.rgcd||(S.rgcd={}),base=[.015,.03,.05][S.diff??1];
+  if(S.m<6)return;const rg=S.rgcd||(S.rgcd={}),base=[.015,.03,.05,.08][S.diff??1];
   S.rivals.forEach((r,i)=>{
     if(!r.alive)return;const co=i+1;
     const cs=rivalCards(co).filter(c=>RK[CARDS[c].name]&&(rg[c]??-99)+10<=S.m);
@@ -564,7 +590,17 @@ function freePool(){return rivalCards(-1);}
 function faceHTML(s){return s.card!=null?`<img class="face" src="${cardImg(s.card)}" alt="">`:`<span class="face" style="--c:${s.c}">${esc(s.name[0])}</span>`;}
 function rarBadge(c){const r=RAR[CARDS[c].rar];return `<span class="rar" style="--rc:${r.c}">${r.n}</span>`;}
 function facSeal(c){const f=CARDS[c].fac;return f==='free'?'':`<span class="fs" style="--c:${COLORS[FAC[f].co]}">${FAC[f].s}</span>`;}
-function skillTxt(c){const C=CARDS[c];if(C.trait)return 'クセ：'+(S.known[c]?TRAIT[C.trait]:'？？？（入社すると分かる）');return C.sk.map(([k,v])=>SK[k](v)).join(' ／ ');}
+const YOGEN={郭嘉:2,諸葛亮:2,司馬懿:1,法正:1,龐統:1,荀彧:1,馬謖:-1};
+function schedNext(){const T=S.trend,o=GENRES.filter(x=>x.id!==T.g);T.next=pick(o).id;T.alt=pick(o.filter(x=>x.id!==T.next)).id;T.mz=R()<.5;}
+function yogen(){let best=null;myCards().forEach(s=>{const n=CARDS[s.card].name,v=YOGEN[n];if(v==null)return;if(!best||v>best.v||(best.v<0&&v>0))best={v,n};});return best;}
+function forecast(){
+  const y=yogen();if(!y)return null;if(!S.trend.next)schedNext();
+  const T=S.trend,left=T.until-S.m;
+  if(y.v===2)return {y,left,lo:left,hi:left,next:[T.next],txt:`${GI[T.g].n}ブームは残り${left}ヶ月。次は${GI[T.next].n}が来ます`};
+  if(y.v===1){const c=[T.next,T.alt].sort();return {y,left,lo:Math.max(1,left-1),hi:left+1,next:c,txt:`${GI[T.g].n}ブームは残り${Math.max(1,left-1)}〜${left+1}ヶ月。次は${GI[c[0]].n}か${GI[c[1]].n}`};}
+  const g=T.mz?T.next:T.alt;return {y,left:null,next:[g],bluff:true,txt:`「次は${GI[g].n}で間違いなし！ 完璧な読みです！」`};
+}
+function skillTxt(c){const C=CARDS[c],y=YOGEN[C.name],yt=y===2?'ブームの終わりと次のブームを正確に予測':y===1?'ブームの時期と次の候補をおおまかに予測':y===-1?'ブームを予測（ただし半分は外れる）':'';if(C.trait)return 'クセ：'+(S.known[c]?TRAIT[C.trait]:'？？？（入社すると分かる）')+(yt&&S.known[c]?' ／ '+yt:'');return C.sk.map(([k,v])=>SK[k](v)).concat(yt?[yt]:[]).join(' ／ ');}
 function cardHead(c){const C=CARDS[c];return `<div class="ch"><img class="cp" style="--rc:${RAR[C.rar].c}" src="${cardImg(c)}" alt=""><div class="cn"><div class="cnt">${rarBadge(c)}${facSeal(c)}<b>${C.name}</b><small>${C.read}</small></div><div class="crole${C.trait?' bad':''}">${C.trait?C.tag:C.role}</div>${C.gen&&C.gen.length?`<div class="cg">得意ジャンル：${C.gen.map(g=>GI[g].n).join('・')}</div>`:''}<q>${C.quote}</q></div></div>`;}
 function statBars(st){return `<div class="stats3">${['企画','技術','演出'].map((n,a)=>`<div class="stat c-${'pta'[a]}">${n} <b>${Math.round(st[a])}</b><div class="meter"><i style="width:${st[a]}%"></i></div></div>`).join('')}</div>`;}
 function genMarket(){
@@ -582,7 +618,7 @@ function genMarket(){
 function fame(){return Math.min(30,S.fans/30000);}
 function scoutRate(c,mode,o){
   const C=CARDS[c];let p=RAR[C.rar].base+fame()+effP('scout')+[0,15,30][o];
-  if(mode==='poach'){p-=25;p-=Math.min(15,S.rivals[S.own[c]-1].fans/100000);}
+  if(mode==='poach'){p-=25+(loyOf(c)-50)*.6;p-=Math.min(15,S.rivals[S.own[c]-1].fans/100000);}
   else{const it=S.mkt.find(x=>x.c===c);if(it&&it.int)p-=12;}
   if(c===3)p+=(S.fails[c]||0)*20;
   const er=rel(envoyOk(),c);if(er)p+=er.v;
@@ -594,7 +630,7 @@ function tryScout(c,mode,o){
   const C=CARDS[c],fee=scoutFee(c,mode,o),ok=R()*100<scoutRate(c,mode,o);
   S.cash-=50;S.tried[c]=S.m;
   if(ok){
-    const from=S.own[c];S.cash-=fee;S.own[c]=0;S.known[c]=1;
+    const from=S.own[c];S.cash-=fee;S.own[c]=0;S.known[c]=1;setLoy(c,[55,65,75][o]);
     S.staff.push({id:'c'+c,card:c,sal:scoutSal(c,o),trained:-1});
     S.mkt=S.mkt.filter(x=>x.c!==c);
     log(from>0?`${S.rivals[from-1].name}から${C.name}を引き抜いた！`:`${C.name}が入社した！`,'hi');
@@ -604,13 +640,13 @@ function tryScout(c,mode,o){
 function rivalScout(){
   S.mkt.forEach(x=>{
     if(S.own[x.c]!==-1||!x.int)return;const r=S.rivals[x.int-1];if(!r.alive)return;const fee=CARDS[x.c].sal*4;
-    if(r.cash>fee+4000&&rivalCards(x.int).length<9&&R()<.4){r.cash-=fee;S.own[x.c]=x.int;log(`${r.name}が${CARDS[x.c].name}を獲得！`,'bad');}
+    if(r.cash>fee+4000&&rivalCards(x.int).length<9&&R()<[.3,.4,.5,.65][S.diff??1]){r.cash-=fee;S.own[x.c]=x.int;setLoy(x.c,60+DLOY());log(`${r.name}が${CARDS[x.c].name}を獲得！`,'bad');}
   });
   S.rivals.forEach((r,i)=>{
     const co=i+1;if(!r.alive||r.cash<8000||rivalCards(co).length>=9||R()>.035)return;
     const pool=freePool().filter(c=>!S.mkt.some(x=>x.c===c)&&CARDS[c].rar!=='N');if(!pool.length)return;
     const pref=pool.filter(c=>FAC[CARDS[c].fac].co===co),c=pick(pref.length&&R()<.7?pref:pool);
-    r.cash-=CARDS[c].sal*4;S.own[c]=co;log(`${r.name}が${CARDS[c].name}を迎え入れた`);
+    r.cash-=CARDS[c].sal*4;S.own[c]=co;setLoy(c,60+DLOY());log(`${r.name}が${CARDS[c].name}を迎え入れた`);
   });
 }
 
@@ -643,12 +679,13 @@ function makeRivals(){return[
  {key:'shu',seal:'蜀',name:'劉蜀スタジオ',leader:'劉備',lc:1,cash:8000,staffN:1,skill:41,fans:180000,pref:['rpg','adv','slg'],big:1,hype:25,style:'少数精鋭のRPG職人集団。寡作だが名作を生む。',alive:true,proj:null,neg:0,games:[]}
 ];}
 function newState(name){
-  S={v:3,len:LEN_SEL,econ:null,morale:null,own:CARDS.map(c=>INITK[c.img]??-1),cst:CARDS.map(c=>c.st0.slice()),known:CARDS.map(()=>0),mkt:[],tried:{},fails:{},m:0,diff:DIFF_SEL,name:name||'ミリオンソフト',cash:3000,fans:0,office:0,engine:0,pr:false,short:0,over:null,
+  S={v:3,loy:CARDS.map(c=>c.leader?100:INITK[c.img]!=null?Math.min(98,ri(68,88)+[0,0,5,10][DIFF_SEL]):60),len:LEN_SEL,econ:null,morale:null,own:CARDS.map(c=>INITK[c.img]??-1),cst:CARDS.map(c=>c.st0.slice()),known:CARDS.map(()=>0),mkt:[],tried:{},fails:{},m:0,diff:DIFF_SEL,name:name||'ミリオンソフト',cash:3000,fans:0,office:0,engine:0,pr:false,short:0,over:null,
     unlocked:{genres:['rpg','act','pzl','adv'],themes:THEMES.filter(t=>!t.cost).map(t=>t.n),scales:['S'],plats:['sp','pc']},
-    staff:[],cand:[],proj:null,games:[],memo:{},hist:[],log:[],trend:{g:pick(['pzl','rpg','act']),until:ri(8,12)},
+    staff:[],cand:[],proj:null,games:[],memo:{},hist:[],log:[],trend:{g:pick(['pzl','rpg','act']),until:ri(8,12),next:null},
     rivals:makeRivals(),stats:{million:0,hof:0,award:0},adsUsed:{m:-1,ids:[]},last:null,flags:{}};
   const pres=makeStaff(28);pres.st=[32,28,30];pres.sal=0;pres.pres=true;pres.name='社長（あなた）';pres.c='#b8902a';
   S.staff=[pres,makeStaff(24),makeStaff(24)];
+  if(S.diff===3)S.rivals.forEach(r=>{r.cash=Math.round(r.cash*1.6);r.fans=Math.round(r.fans*1.3);});
   S.rivals.forEach((r,i)=>{
     for(const age of [2,5]){
       const sc=r.big===2?'M':'S',g=pick(r.pref),t=pick(THEMES.slice(0,6)).n;
@@ -671,7 +708,7 @@ function makeGame(co,spec,rv,hype){
   const avg=rv.reduce((a,b)=>a+b,0)/4,plat=PI[spec.p],sc=SCALES[spec.sc];
   const comp=allGames().filter(x=>x.co!==co&&x.g===spec.g&&S.m-x.out<=2).length;
   const total=1500*Math.exp(.6*avg)*sc.mult*plat.mkt(Math.max(0,S.m))*(1+Math.min(hype,300)/200)*(1+.8*Math.min(1,coFans(co)/6e6))
-    *(S.trend.g===spec.g?1.4:1)*(plat.fit.includes(spec.g)?1.1:1)*Math.pow(.85,comp)*(.85+R()*.3)*(co===0?1+effP('sales')/100:1);
+    *(S.trend.g===spec.g?1.4:(S.trend.prev===spec.g&&S.m<S.trend.prevUntil?.85:1))*(plat.fit.includes(spec.g)?1.1:1)*Math.pow(.85,comp)*(.85+R()*.3)*(co===0?1+effP('sales')/100:1);
   return{co,title:spec.title,g:spec.g,t:spec.t,p:spec.p,sc:spec.sc,rv,avg,total:Math.round(total),sold:0,age:0,out:S.m,
     unit:Math.round(sc.unit*plat.price),active:true,million:false,hype:Math.round(hype)};
 }
@@ -810,6 +847,7 @@ function advance(){
     if(S.short<3)info(`資金ショート ${S.short}/3`,'short',`<p class="center">資金がマイナスです。<b>3ヶ月続くと倒産</b>します。<br>社員を減らす、安いオフィスを諦めるなど、急いで手を打ちましょう。</p>`);
     if(S.short>=3){gameOver();return finishTurn();}
   }else S.short=0;
+  loyMonth();
   rivalSchemes();
   monthEvents();
   const cm=calM(S.m);
@@ -828,9 +866,14 @@ function monthEvents(){
   if(hasTrait('harass')&&R()<.08){const v=S.staff.filter(s=>!s.pres&&s.card==null);if(v.length){const x=pick(v);S.staff=S.staff.filter(s=>s!==x);log(`董卓のパワハラに耐えかねて、${x.name}が退職した`,'bad');info('社員の退職','quit',`<p class="center">董卓のパワハラに耐えかねて、<b>${esc(x.name)}</b>が会社を去りました…</p>`);}}
   myCards().filter(s=>CARDS[s.card].trait==='betray').forEach(s=>{const al=[1,2,3].filter(co=>S.rivals[co-1].alive);if(!al.length||R()>.1)return;const co=pick(al);S.staff=S.staff.filter(x=>x!==s);S.own[s.card]=co;log(`${CARDS[s.card].name}「条件が良かったので…」${S.rivals[co-1].name}へ勝手に転職した`,'bad');});
   if(S.m+1>=S.trend.until){
-    const g=pick(GENRES.filter(x=>x.id!==S.trend.g)).id;S.trend={g,until:S.m+1+ri(8,14)};
-    log(`業界ニュース：今、${GI[g].n}ブームが到来！`,'hi');
-    if(S.m>0)info(`${GI[g].n}ブーム到来`,'boomg',`<p class="center">街中が${GI[g].n}一色に！<br>しばらくの間、${GI[g].n}のゲームがよく売れます。</p>`);
+    const old=S.trend.g,g=S.trend.next||pick(GENRES.filter(x=>x.id!==old)).id,fc=S.m>0?forecast():null;
+    S.trend={g,until:S.m+1+ri(8,14),prev:old,prevUntil:S.m+5,next:null};schedNext();
+    log(`業界ニュース：${GI[old].n}ブームが去り、${GI[g].n}ブームが到来！`,'hi');
+    if(S.m>0){
+      const P=S.proj,hitP=P&&P.g===g,lostP=P&&P.g===old;
+      const fcLine=fc?(fc.bluff?`<p class="center" style="color:var(--bad)">${fc.y.n}の予言は${fc.next[0]===g?'まさかの的中！':'大ハズレ…'}</p>`:`<p class="center" style="color:var(--good)">${fc.y.n}の読みどおりでした</p>`):'';
+      info(lostP?'ブーム終焉':`${GI[g].n}ブーム到来`,lostP?'recession':'boomg',`<p class="center">${GI[old].n}ブームが去り、街は${GI[g].n}一色に！<br>しばらく${GI[g].n}がよく売れ、${GI[old].n}は反動で売れ行きが落ちます。</p>${lostP?`<p class="center" style="color:var(--bad)">開発中の『${esc(P.title)}』は、発売前にブームが去ってしまった…</p>`:''}${hitP?`<p class="center" style="color:var(--good)">開発中の『${esc(P.title)}』に追い風が吹いた！</p>`:''}${fcLine}`);
+    }
   }
   if(S.m===29){log('業界ニュース：次世代機「ドリームボックスX」が来月発売。研究からライセンスを取得できます','hi');info('次世代機 発売','newhw','<p class="center">次世代機「ドリームボックスX」が来月発売！<br>研究からライセンスを取得できます。</p>');}
   if(cm===9){
@@ -840,11 +883,12 @@ function monthEvents(){
     }else if(S.proj){S.cash-=500;S.proj.hype+=45;}
     else log('天下ゲーム博が開幕。ライバル各社が新作を発表した');
   }
+  if(S.m===167&&S.len>168){log('業界ニュース：究極機「ドリームボックスΩ」が来月発売。研究からライセンスを取得できます','hi');info('究極機 発売','newhw','<p class="center">究極機「ドリームボックスΩ」が来月発売！<br>研究からライセンスを取得できます。</p>');}
   if(S.m===83&&S.len>84){log('業界ニュース：新世代機「ドリームボックスZ」が来月発売。研究からライセンスを取得できます','hi');info('新世代機 発売','newhw','<p class="center">新世代機「ドリームボックスZ」が来月発売！<br>研究からライセンスを取得できます。</p>');}
   if(cm===12&&S.m>6&&S.staff.length>=4){
     const fee=Math.round(S.staff.reduce((a,s)=>a+s.sal,0)*.5);
     choice('年末ボーナス',`${ill('bonus')}<p>社員たちが年末ボーナスを心待ちにしています。</p><div class="sum"><span>ボーナス総額</span><b>${fmt(fee)}</b><span>支給した場合</span><b>3ヶ月 士気上昇（開発力+8%）</b><span>見送った場合</span><b>3ヶ月 士気低下（開発力-12%）</b></div>`,
-      [{t:'見送る',c:'ghost',f:()=>{S.morale={mul:.88,until:S.m+4};log('年末ボーナスを見送った。社内の空気が重い…','bad');}},{t:'支給する',c:'pri',f:()=>{S.cash-=fee;S.morale={mul:1.08,until:S.m+4};log('年末ボーナスを支給。社員のやる気が上がった','hi');}}]);
+      [{t:'見送る',c:'ghost',f:()=>{myCards().forEach(x=>addLoy(x.card,-6));S.morale={mul:.88,until:S.m+4};log('年末ボーナスを見送った。社内の空気が重い…','bad');}},{t:'支給する',c:'pri',f:()=>{S.cash-=fee;myCards().forEach(x=>addLoy(x.card,8));S.morale={mul:1.08,until:S.m+4};log('年末ボーナスを支給。社員のやる気が上がった','hi');}}]);
   }
   const pickRun=(list,p)=>{if(R()>=p)return;const ev=list.filter(e=>e.ok()&&!(e.once&&S.flags[e.id])&&!(e.cool&&S.flags['cd_'+e.id]>S.m));if(!ev.length)return;const e=pick(ev);if(e.once)S.flags[e.id]=1;if(e.cool)S.flags['cd_'+e.id]=S.m+e.cool;e.run();};
   pickRun(EVENTS.filter(e=>!e.acc),.38);
@@ -860,10 +904,11 @@ const EVENTS=[
    const st=S.staff.filter(s=>!s.pres).sort((a,b)=>sumSt(b)-sumSt(a))[0];if(!st)return;
    const nm=nameOf(st),sst=stOf(st);
    if(R()*100<effP('guard')){const g=myCards().find(s=>CARDS[s.card].sk.some(k=>k[0]==='guard'));log(`${r.name}が${nm}の引き抜きを画策。${g?CARDS[g.card].name+'が':''}阻止した`,'hi');return;}
+   if(st.card!=null&&R()*100<loyOf(st.card)-30){log(`${nm}は${r.name}の誘いをきっぱり断った（忠誠${loyOf(st.card)}）`,'hi');info('引き抜きを拒否','poach',`${cardHead(st.card)}${loyHTML(st.card)}<p class="center">「この会社に骨を埋める覚悟です」<br><b>${nm}</b>は${r.name}の誘いを断りました。</p>`);return;}
    const up=Math.round(st.sal*.4),dame=st.card!=null&&CARDS[st.card].trait;
-   choice('引き抜き工作',`${ill('poach','sm')}${st.card!=null?cardHead(st.card):''}<p>${r.name}の${r.leader}が、<b>${esc(nm)}</b>（企画${Math.round(sst[0])}・技術${Math.round(sst[1])}・演出${Math.round(sst[2])}）に好条件でオファーを出しています。${dame?'正直、手放してもいいかもしれません。':''}</p><div class="sum"><span>引き留めの昇給</span><b>月+${fmt(up)}</b></div>`,
-     [{t:'送り出す',c:'ghost',f:()=>{S.staff=S.staff.filter(x=>x!==st);if(st.card!=null)S.own[st.card]=co;else r.skill+=1.5;log(`${nm}が${r.name}へ移籍…`,'bad');info('社員の退職','quit',`<p class="center"><b>${esc(nm)}</b>が${r.name}へ移籍していきました。</p>`);}},
-      {t:'昇給して引き留める',c:'pri',f:()=>{st.sal+=up;log(`${nm}を昇給して引き留めた`);}}]);}},
+   choice('引き抜き工作',`${ill('poach','sm')}${st.card!=null?cardHead(st.card)+loyHTML(st.card,'忠誠が高いほど、自分から断ってくれます'):''}<p>${r.name}の${r.leader}が、<b>${esc(nm)}</b>（企画${Math.round(sst[0])}・技術${Math.round(sst[1])}・演出${Math.round(sst[2])}）に好条件でオファーを出しています。${dame?'正直、手放してもいいかもしれません。':''}</p><div class="sum"><span>引き留めの昇給</span><b>月+${fmt(up)}</b></div>`,
+     [{t:'送り出す',c:'ghost',f:()=>{S.staff=S.staff.filter(x=>x!==st);if(st.card!=null){S.own[st.card]=co;setLoy(st.card,60);}else r.skill+=1.5;log(`${nm}が${r.name}へ移籍…`,'bad');info('社員の退職','quit',`<p class="center"><b>${esc(nm)}</b>が${r.name}へ移籍していきました。</p>`);}},
+      {t:'昇給して引き留める',c:'pri',f:()=>{st.sal+=up;if(st.card!=null)addLoy(st.card,15);log(`${nm}を昇給して引き留めた`);}}]);}},
  {id:'bigname',ok:()=>S.m>3&&freePool().some(c=>['UR','SSR'].includes(CARDS[c].rar)&&!S.mkt.some(x=>x.c===c)),run(){
    const c=pick(freePool().filter(c=>['UR','SSR'].includes(CARDS[c].rar)&&!S.mkt.some(x=>x.c===c)));
    const al=[1,2,3].filter(co=>S.rivals[co-1].alive);S.mkt.unshift({c,int:al.length?pick(al):0});if(S.mkt.length>5)S.mkt.length=5;
@@ -877,7 +922,7 @@ const EVENTS=[
  {id:'trip',ok:()=>S.staff.length>=3&&S.cash>S.staff.length*100,run(){
    const fee=S.staff.length*60;
    choice('社員旅行',`${ill('trip')}<p>社員から「みんなで温泉に行きたい！」と声が上がっています。リフレッシュすると全員の能力が少し伸びます。</p><div class="sum"><span>費用</span><b>${fmt(fee)}</b><span>効果</span><b>全員 全能力+2</b></div>`,
-     [{t:'今は忙しい',c:'ghost',f:()=>{}},{t:'行こう！',c:'pri',f:()=>{S.cash-=fee;S.staff.forEach(s=>{const st=stOf(s);for(let a=0;a<3;a++)st[a]=Math.min(99,st[a]+2);});log('社員旅行で英気を養った','hi');}}]);}},
+     [{t:'今は忙しい',c:'ghost',f:()=>{}},{t:'行こう！',c:'pri',f:()=>{S.cash-=fee;S.staff.forEach(s=>{const st=stOf(s);for(let a=0;a<3;a++)st[a]=Math.min(99,st[a]+2);});myCards().forEach(x=>addLoy(x.card,5));log('社員旅行で英気を養った','hi');}}]);}},
  {id:'collab',ok:()=>S.m>8&&S.games.length>=2,run(){const f=ri(5,20)*100;S.cash+=f;log(`グッズ化のライセンス収入 +${fmt(f)}`,'hi');}},
  {id:'investor',once:true,ok:()=>S.m>=2&&S.m<=24&&S.cash<2500,run(){
    choice('出資の申し出',`<p>ベンチャーキャピタルが${esc(S.name)}の将来性に注目しています。</p><div class="sum"><span>出資額</span><b>${fmt(5000)}</b></div>`,
@@ -938,7 +983,7 @@ function buyPrice(r){return Math.max(6000,Math.round(revN(S.rivals.indexOf(r)+1,
 function absorb(r,co){
   r.alive=false;r.proj=null;S.fans+=r.fans*.5;
   const cs=rivalCards(co).sort((a,b)=>(!!CARDS[a].trait-!!CARDS[b].trait)||(CARDS[b].sal-CARDS[a].sal));let n=0;
-  cs.forEach(c=>{if(S.staff.length<staffCap()){S.own[c]=0;S.known[c]=1;S.staff.push({id:'c'+c,card:c,sal:CARDS[c].sal,trained:-1});n++;}else S.own[c]=-1;});
+  cs.forEach(c=>{if(S.staff.length<staffCap()){S.own[c]=0;S.known[c]=1;setLoy(c,45);S.staff.push({id:'c'+c,card:c,sal:CARDS[c].sal,trained:-1});n++;}else S.own[c]=-1;});
   log(`${r.name}を買収！ ${r.leader}ら${n}人の武将が加わった`,'hi');
   if(!SIM)Q.push({title:'買収成立',html:`${ill('merger')}<div class="bigt pop">${r.name} 買収</div><p class="center">${r.leader}ら${n}人が${esc(S.name)}に加わりました。</p>`,btns:[{t:'OK',c:'pri',f:()=>{}}],snd:'million'});
 }
@@ -1101,7 +1146,7 @@ function save(){
   cloudPush({json:j,t:S.savedAt,name:S.name,m:S.m});renderSaveTag();
 }
 function clearSave(){try{localStorage.removeItem('m3k-save');}catch(e){}if(CLOUD.db){CLOUD.data=null;cloudPush({json:'',t:Date.now(),name:'',m:0});}}
-function parseSave(j){try{const s=JSON.parse(j||'null');if(s&&!s.len)s.len=60;return s&&s.v===3&&!s.over?s:null;}catch(e){return null;}}
+function parseSave(j){try{const s=JSON.parse(j||'null');if(s&&!s.len)s.len=60;if(s&&!s.loy)s.loy=CARDS.map(()=>60);return s&&s.v===3&&!s.over?s:null;}catch(e){return null;}}
 function loadSave(){
   let l=null;try{l=parseSave(localStorage.getItem('m3k-save'));}catch(e){}
   const c=CLOUD.data&&CLOUD.data.json?parseSave(CLOUD.data.json):null;
@@ -1153,7 +1198,8 @@ function render(){
     <section class="share" aria-label="市場シェア">
       <div class="banners">${[0,1,2,3].map(c=>`<button class="bn${c===0?' me':''}${c>0&&!S.rivals[c-1].alive?' dead':''}" data-a="rivals" type="button">${sealHTML(c)}<span class="nm">${esc(coName(c))}</span><span class="pc">${sh[c].toFixed(1)}%</span></button>`).join('')}</div>
       <div class="bar">${sh.map((v,c)=>`<i style="width:${v}%;--c:${COLORS[c]}"></i>`).join('')}</div>
-      <div class="trend"><span>市場シェア（直近6ヶ月の販売本数）</span><span class="chip hot">${GI[S.trend.g].n}ブーム</span>${S.econ&&S.econ.until>S.m?`<span class="chip${S.econ.mul<1?'':' gold'}">${S.econ.name} 残り${S.econ.until-S.m}ヶ月</span>`:''}${seasonMul()>1?`<span class="chip gold">${({12:'年末商戦',8:'夏休み商戦',1:'お正月商戦'})[calM(S.m)]}</span>`:''}${S.shield>S.m?`<span class="chip gold">鉄壁の守り 残り${S.shield-S.m}ヶ月</span>`:''}${S.morale&&S.morale.until>S.m?`<span class="chip${S.morale.mul<1?' hot':' gold'}">士気${S.morale.mul<1?'低下':'上昇'}</span>`:''}</div>
+      ${(()=>{const f=forecast();return f?`<div class="fc${f.bluff?' bluff':''}"><b>ブーム予報（${f.y.n}）</b>${f.txt}</div>`:'';})()}
+      <div class="trend"><span>市場シェア（直近6ヶ月の販売本数）</span><span class="chip hot">${GI[S.trend.g].n}ブーム</span>${S.trend.prev&&S.m<S.trend.prevUntil?`<span class="chip">${GI[S.trend.prev].n}は反動で不振</span>`:''}${S.econ&&S.econ.until>S.m?`<span class="chip${S.econ.mul<1?'':' gold'}">${S.econ.name} 残り${S.econ.until-S.m}ヶ月</span>`:''}${seasonMul()>1?`<span class="chip gold">${({12:'年末商戦',8:'夏休み商戦',1:'お正月商戦'})[calM(S.m)]}</span>`:''}${S.shield>S.m?`<span class="chip gold">鉄壁の守り 残り${S.shield-S.m}ヶ月</span>`:''}${S.morale&&S.morale.until>S.m?`<span class="chip${S.morale.mul<1?' hot':' gold'}">士気${S.morale.mul<1?'低下':'上昇'}</span>`:''}</div>
     </section>
     ${proj}
     <section class="acts">
@@ -1172,7 +1218,7 @@ function chartSVG(){
   const W=320,Ht=130,pl=26,pr=8,pt=8,pb=18,sx=i=>pl+(W-pl-pr)*i/Math.max(1,n-1),sy=v=>pt+(Ht-pt-pb)*(1-v/100);
   const series=[0,1,2,3].map(c=>H.map((_,i)=>{let u=[0,0,0,0];for(let k=Math.max(0,i-5);k<=i;k++)for(let j=0;j<4;j++)u[j]+=H[k].units[j];const t=u.reduce((a,b)=>a+b,0)||1;return u[c]/t*100;}));
   const grid=[0,25,50,75,100].map(v=>`<line class="grid" x1="${pl}" x2="${W-pr}" y1="${sy(v)}" y2="${sy(v)}"/><text x="${pl-4}" y="${sy(v)+3}" text-anchor="end">${v}</text>`).join('');
-  const yrs=[];for(let i=0;i<n;i+=12)yrs.push(`<text x="${sx(i)}" y="${Ht-4}" text-anchor="middle">${yearOf(i)}年目</text>`);
+  const yrs=[],ys=12*Math.ceil(n/72);for(let i=0;i<n;i+=ys)yrs.push(`<text x="${sx(i)}" y="${Ht-4}" text-anchor="middle">${yearOf(i)}年目</text>`);
   const lines=series.map((s,c)=>`<polyline fill="none" stroke="${COLORS[c]}" stroke-width="${c===0?2.6:1.6}" stroke-linejoin="round" points="${s.map((v,i)=>sx(i).toFixed(1)+','+sy(v).toFixed(1)).join(' ')}"/><circle cx="${sx(n-1)}" cy="${sy(s[n-1])}" r="3" fill="${COLORS[c]}"/>`).join('');
   return `<div class="sec">シェアの推移</div><svg class="chart" viewBox="0 0 ${W} ${Ht}" role="img" aria-label="シェア推移">${grid}${yrs.join('')}${lines}</svg>`;
 }
@@ -1192,7 +1238,7 @@ function renderSheet(){
       const sc=SCALES[PLAN.sc],staffOk=S.staff.length>=sc.need,pc=planCost(PLAN),pm=planMonths(PLAN),li=leadInfo(PLAN),cashOk=S.cash>=pc;
       const lch=`<button class="opt" type="button" data-pl="-1" aria-pressed="${!li}">社長が指揮</button>`+myCards().map(s=>{const C=CARDS[s.card],fit=C.gen.includes(PLAN.g);return `<button class="opt lead" type="button" data-pl="${s.card}" aria-pressed="${li&&li.c===s.card}"><img class="face" src="${cardImg(s.card)}" alt="">${C.name}${fit?'<small>得意</small>':''}</button>`;}).join('');
       const lnote=li?(li.fit?`<div class="rel good">${CARDS[li.c].name}は${GI[PLAN.g].n}が得意：期間 -${li.cut}ヶ月・費用 -25%・完成度${CARDS[li.c].trait?' -6%（クセ者が仕切る）':' +6%'}</div>`:`<div class="rel">${CARDS[li.c].name}の得意は${CARDS[li.c].gen.map(g=>GI[g].n).join('・')}。今回は本人の働きが1.5倍になるだけです</div>`):(myCards().length?'':'<div class="rel">武将をスカウトすると、開発リーダーに任命できます</div>');
-      const gch=GENRES.map(g=>{const un=S.unlocked.genres.includes(g.id);return `<button class="opt" type="button" data-pg="${g.id}" aria-pressed="${PLAN.g===g.id}" ${un?'':'disabled'}>${g.n}${S.trend.g===g.id?'<span class="hot">ブーム</span>':''}</button>`;}).join('');
+      const gch=GENRES.map(g=>{const un=S.unlocked.genres.includes(g.id);return `<button class="opt" type="button" data-pg="${g.id}" aria-pressed="${PLAN.g===g.id}" ${un?'':'disabled'}>${g.n}${S.trend.g===g.id?'<span class="hot">ブーム</span>':''}${(()=>{const f=forecast();return f&&f.next.includes(g.id)&&S.trend.g!==g.id?'<span class="hot nx">次?</span>':'';})()}</button>`;}).join('');
       const tch=THEMES.map(t=>{const un=S.unlocked.themes.includes(t.n),k=S.memo[PLAN.g+'|'+t.n]??(effP('intel')>0?combo(PLAN.g,t.n):null);return `<button class="opt" type="button" data-pt="${t.n}" aria-pressed="${PLAN.t===t.n}" ${un?'':'disabled'}>${t.n}<span class="mk">${k!=null?COMBO_MARK[k]:'?'}</span></button>`;}).join('');
       const pch=PLATS.map(p=>{const un=S.unlocked.plats.includes(p.id);if(!un)return '';return `<button class="opt" type="button" data-pp="${p.id}" aria-pressed="${PLAN.p===p.id}">${p.n}${p.fit.includes(PLAN.g)?'<small>得意</small>':''}</button>`;}).join('');
       const sch=Object.entries(SCALES).map(([k,s])=>{const un=S.unlocked.scales.includes(k);return `<button class="opt" type="button" data-ps="${k}" aria-pressed="${PLAN.sc===k}" ${un?'':'disabled'}>${s.n}<small>${s.months}ヶ月</small></button>`;}).join('');
@@ -1203,6 +1249,7 @@ function renderSheet(){
         <div class="group"><div class="sec">機種</div><div class="chips">${pch}</div></div>
         <div class="group"><div class="sec">規模</div><div class="chips">${sch}</div></div>
         <div class="group"><div class="sec">開発リーダー（得意ジャンルなら期間短縮・費用25%減）</div><div class="chips">${lch}</div>${lnote}</div>
+        ${(()=>{const f=forecast(),G=GI[PLAN.g].n;if(PLAN.g===S.trend.g){if(!f||f.bluff)return `<div class="rel">${G}ブーム中。ただし発売時（${pm}ヶ月後）まで続くかは分かりません。郭嘉や諸葛亮がいれば予測できます</div>`;return pm<f.lo?`<div class="rel good">${f.y.n}「ブーム中に発売できます」（残り${f.lo===f.hi?f.lo:f.lo+'〜'+f.hi}ヶ月・開発${pm}ヶ月）</div>`:`<div class="rel bad">${f.y.n}「発売前にブームが去る恐れあり」（残り${f.lo===f.hi?f.lo:f.lo+'〜'+f.hi}ヶ月・開発${pm}ヶ月）</div>`;}if(f&&f.next.includes(PLAN.g)){if(f.bluff)return `<div class="rel">馬謖「次は${G}が来ます！」……本当でしょうか</div>`;return pm>=f.hi?`<div class="rel good">${f.y.n}「発売の頃に${G}ブームが来る${f.next.length>1?'かもしれません':'はずです'}」</div>`:`<div class="rel">${f.y.n}「${G}ブームはまだ先です（${f.lo}ヶ月以上あと）」</div>`;}return '';})()}
         <div class="sum"><span>開発費</span><b>${pc<sc.cost?`<s style="opacity:.5">${fmt(sc.cost)}</s> `:''}${fmt(pc)}</b><span>開発期間</span><b>${pm<sc.months?`<s style="opacity:.5">${sc.months}</s> `:''}${pm}ヶ月</b><span>必要な社員</span><b>${sc.need}人以上（現在${S.staff.length}人）</b><span>機種の市場規模</span><b>${starsHTML(PI[PLAN.p].mkt(S.m)*PI[PLAN.p].price*2.6)}</b></div>
         ${!staffOk?'<div class="warn">社員が足りません。採用で人数を増やしましょう</div>':''}${!cashOk?'<div class="warn">資金が足りません</div>':''}
         <button class="btn pri" type="button" data-s="startplan" ${staffOk&&cashOk?'':'disabled'}>開発を始める</button>`);
@@ -1218,7 +1265,7 @@ function renderSheet(){
     const env=envoyOk();
     const envBar=`<div class="group"><div class="sec">交渉役（相性が良いと成功率アップ）</div><div class="envs"><button type="button" class="env" data-env="-1" aria-pressed="${env==null}"><span class="face" style="--c:#b8902a">社</span><span>社長</span></button>${myCards().map(s=>`<button type="button" class="env" data-env="${s.card}" aria-pressed="${env===s.card}"><img class="face" src="${cardImg(s.card)}" alt=""><span>${CARDS[s.card].name}</span></button>`).join('')}</div></div>`;
     const relLine=c=>{const r=rel(env,c),be=bestEnvoy(c);if(r)return `<div class="rel ${r.v>0?'good':'bad'}">交渉役 ${CARDS[env].name}と${r.l}（成功率 ${r.v>0?'+':''}${r.v}）</div>`;if(be&&be.r.v>0)return `<div class="rel">おすすめ交渉役：${CARDS[be.c].name}（${be.r.l} +${be.r.v}）</div>`;return '';};
-    const one=(c,mode,extra)=>{const C=CARDS[c];return `<div class="item">${cardHead(c)}${extra||''}${relLine(c)}${statBars(S.cst[c])}<div class="skl${C.trait?' bad':''}">${skillTxt(c)}</div>${GAMBLE[C.name]?`<div class="skl" style="color:var(--gold)">${KIND[gKind(GAMBLE[C.name])]}「${GAMBLE[C.name].n}」 成功率${Math.round(GAMBLE[C.name].p*100)}%：${GAMBLE[C.name].ds}</div>`:''}<div class="sub"><span>月給 ${fmt(scoutSal(c,0))}〜</span>${c===3&&S.fails[c]?`<span>三顧の礼 ${S.fails[c]+1}回目</span>`:''}</div>${offerBtns(c,mode)}</div>`;};
+    const one=(c,mode,extra)=>{const C=CARDS[c];return `<div class="item">${cardHead(c)}${extra||''}${mode==='poach'?loyHTML(c,'忠誠が高いほど引き抜きにくい'):''}${relLine(c)}${statBars(S.cst[c])}<div class="skl${C.trait?' bad':''}">${skillTxt(c)}</div>${GAMBLE[C.name]?`<div class="skl" style="color:var(--gold)">${KIND[gKind(GAMBLE[C.name])]}「${GAMBLE[C.name].n}」 成功率${Math.round(GAMBLE[C.name].p*100)}%：${GAMBLE[C.name].ds}</div>`:''}<div class="sub"><span>月給 ${fmt(scoutSal(c,0))}〜</span>${c===3&&S.fails[c]?`<span>三顧の礼 ${S.fails[c]+1}回目</span>`:''}</div>${offerBtns(c,mode)}</div>`;};
     let body='';
     if(ST==='market'){
       body=`<p>交渉は1人につき月1回、交渉費${fmt(50)}。成功したときだけ契約金を払います。好条件ほど成功しやすい代わりに月給も上がります。ファンが多い会社ほど人が集まります。${full?'<b style="color:var(--bad)">オフィスが満員です。</b>':''}</p>
@@ -1238,8 +1285,8 @@ function renderSheet(){
         <div class="list">${ADS.map(a=>{const u=used.includes(a.id);return `<div class="item"><div class="hd"><b>${a.n}</b><span class="r num">${fmt(a.cost)}</span></div><div class="sub">話題性 +${adGain(a)}</div>${u?'<span class="done">今月は実施済み</span>':`<div><button class="btn sm pri" type="button" data-ad="${a.id}" ${S.cash>=a.cost?'':'disabled'}>実施する</button></div>`}</div>`;}).join('')}</div>`);
     }
   }else if(SH==='staff'){
-    h=sheetWrap(`社員 ${S.staff.length}/${staffCap()}人`,`<p>研修は1人につき月1回。開発に参加すると、ジャンルに合った能力が少しずつ伸びます。</p>
-      <div class="list">${S.staff.map((s,i)=>`<div class="item">${s.card!=null?`${cardHead(s.card)}<div class="sub"><span>月給 ${fmt(s.sal)}</span></div>`:`<div class="hd"><span class="face" style="--c:${s.c};margin:0">${esc(s.name[0])}</span><b>${esc(s.name)}</b><span class="r num">${s.pres?'役員報酬なし':'月給 '+fmt(s.sal)}</span></div>`}
+    h=sheetWrap(`社員 ${S.staff.length}/${staffCap()}人`,`<p>武将には忠誠度があります。高いほどライバルの引き抜きを自分から断り、25を切ると去ってしまうことがあります。褒美・ボーナス・社員旅行で上がります。研修は1人につき月1回。開発に参加すると、ジャンルに合った能力が少しずつ伸びます。</p>
+      <div class="list">${S.staff.map((s,i)=>`<div class="item">${s.card!=null?`${cardHead(s.card)}<div class="sub"><span>月給 ${fmt(s.sal)}</span></div>${loyHTML(s.card,loyOf(s.card)<25?'離反の危険！':'')}${s.rew===S.m?'<span class="done">今月は褒美を与えた</span>':`<div><button class="btn sm" type="button" data-rew="${i}" ${S.cash>=rewardCost(s)?'':'disabled'}>褒美を与える（${fmt(rewardCost(s))}・忠誠+15）</button></div>`}`:`<div class="hd"><span class="face" style="--c:${s.c};margin:0">${esc(s.name[0])}</span><b>${esc(s.name)}</b><span class="r num">${s.pres?'役員報酬なし':'月給 '+fmt(s.sal)}</span></div>`}
         ${statBars(stOf(s))}${s.card!=null?`<div class="skl${CARDS[s.card].trait?' bad':''}">${skillTxt(s.card)}</div>${gambleHTML(s.card)}`:''}
         ${s.trained===S.m?'<span class="done">今月は研修済み</span>':`<div class="btns">${['企画','技術','演出'].map((n,a)=>`<button class="btn sm" type="button" data-tr="${i}:${a}" ${S.cash>=trainCost(s)?'':'disabled'}>${n}研修</button>`).join('')}<span class="sub" style="font-size:11px;color:var(--muted);align-self:center">${fmt(trainCost(s))}</span></div>`}
         ${s.pres?'':`<div><button class="btn sm ghost" type="button" data-fire="${i}">${S.fireArm===s.id?'本当に解雇する':'解雇'}</button></div>`}</div>`).join('')}</div>`);
@@ -1307,6 +1354,7 @@ function sheetClick(e){
   if(d.tr){const [i,a]=d.tr.split(':').map(Number);train(S.staff[i],a);}
   if(d.fire){const s=S.staff[+d.fire];if(S.fireArm===s.id){S.staff.splice(+d.fire,1);S.fireArm=null;if(s.card!=null)S.own[s.card]=-1;log(`${nameOf(s)}を解雇した`,'bad');}else S.fireArm=s.id;}
   if(d.hire)hire(+d.hire);
+  if(d.rew){const s=S.staff[+d.rew];S.cash-=rewardCost(s);s.rew=S.m;addLoy(s.card,15);sfx.coin();log(`${nameOf(s)}に褒美を与えた`);}
   if(d.s==='recruit'){S.cash-=100;genCandidates();}
   if(d.lab){
     const id=d.lab,cost=+d.cost;S.cash-=cost;
@@ -1355,7 +1403,7 @@ function showTitle(){
     <div class="rivals3">${makeRivals().map((r,i)=>`<div class="rc"><img class="cp" style="--rc:${COLORS[i+1]}" src="${cardImg(r.lc)}" alt=""><b>${r.name}</b><span>社長 ${r.leader}</span></div>`).join('')}</div>
     <div class="group"><label class="lbl" for="coname">あなたの会社名</label><div class="tin"><input id="coname" maxlength="12" value="ミリオンソフト"></div></div>
     <div class="group"><span class="lbl">ライバルの強さ</span><div class="chips" style="justify-content:center">${DIFF.map((d,i)=>`<button class="opt" type="button" data-t="d${i}" aria-pressed="${DIFF_SEL===i}">${d.n}</button>`).join('')}</div></div>
-    <div class="group"><span class="lbl">期間</span><div class="chips" style="justify-content:center">${[[60,'5年（短期）'],[120,'10年（長期）']].map(([v,n])=>`<button class="opt" type="button" data-t="L${v}" aria-pressed="${LEN_SEL===v}">${n}</button>`).join('')}</div></div>
+    <div class="group"><span class="lbl">期間</span><div class="chips" style="justify-content:center">${[[60,'5年'],[120,'10年'],[240,'20年']].map(([v,n])=>`<button class="opt" type="button" data-t="L${v}" aria-pressed="${LEN_SEL===v}">${n}</button>`).join('')}</div></div>
     <button class="btn pri" data-t="new" type="button">創業する</button>
     ${sv?`<button class="btn" data-t="cont" type="button">続きから（${esc(sv.name)}・${yearOf(sv.m)}年目${calM(sv.m)}月）</button>`:''}
     <p style="margin:0;color:var(--muted);font-size:12px;line-height:1.7">${CLOUD.db?'毎月の終わりと操作のたびに自動保存。同じアカウントなら別の端末でも続きから遊べます。':'毎月の終わりと操作のたびに、この端末へ自動保存します。'}</p>
@@ -1373,7 +1421,7 @@ function titleInfo(t){
   let title='',html='';
   if(t==='news'){title='お知らせ';html=`<p><b>武将60人と天下を争え！</b><br>在野の武将をスカウトし、曹操・孫権・劉備の会社からも引き抜けます。クセ者のダメ社員にはご注意を。</p><p><b>10年モードとイベント追加</b><br>期間を5年か10年から選べます。好景気・不況、炎上やサーバーダウン、アニメ化、ライバル会社の買収など、イベントとアクシデントが大幅に増えました。</p><p><b>オートセーブ対応</b><br>毎月の終わりと操作のたびに自動で保存されます。</p><p><b>遊び方</b><br>新作を企画 → 月を進めて開発 → 発売して稼ぐ。相性の良いジャンル×テーマを見つけ、宣伝で話題を集めましょう。最終決算で企業価値1位なら天下統一。ライバルを全て倒産・買収させても天下統一です。</p>`;}
   else if(t==='mission'){
-    const win=rs.some(x=>x.rank===1),m=[['天下統一（最終決算で1位）',win?'達成':'未達成',win],['ミリオンセラー 3本（1回のプレイで）',best('mil')+'/3本',best('mil')>=3],['殿堂入り 2本（1回のプレイで）',best('hof')+'/2本',best('hof')>=2],['天下ゲーム大賞 受賞',best('award')?'達成':'未達成',best('award')>0],['「むずかしい」で天下統一',rs.some(x=>x.rank===1&&x.diff===2)?'達成':'未達成',rs.some(x=>x.rank===1&&x.diff===2)]];
+    const win=rs.some(x=>x.rank===1),m=[['天下統一（最終決算で1位）',win?'達成':'未達成',win],['ミリオンセラー 3本（1回のプレイで）',best('mil')+'/3本',best('mil')>=3],['殿堂入り 2本（1回のプレイで）',best('hof')+'/2本',best('hof')>=2],['天下ゲーム大賞 受賞',best('award')?'達成':'未達成',best('award')>0],['「修羅」で天下統一',rs.some(x=>x.rank===1&&x.diff===3)?'達成':'未達成',rs.some(x=>x.rank===1&&x.diff===3)],['「むずかしい」で天下統一',rs.some(x=>x.rank===1&&x.diff===2)?'達成':'未達成',rs.some(x=>x.rank===1&&x.diff===2)]];
     title='ミッション';html=`<div class="mis">${m.map(([n,v,ok])=>`<div><span>${n}</span><b class="${ok?'ok':''}">${v}</b></div>`).join('')}</div><p>記録はこの端末に残ります。</p>`;}
   else if(t==='gift'){
     const today=new Date().toISOString().slice(0,10);let last='',pend=false;
