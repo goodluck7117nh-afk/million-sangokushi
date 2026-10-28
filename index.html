@@ -1,5 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>ミリオン三国志</title>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>ミリオン三国志</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
@@ -521,7 +520,7 @@ function rivalSchemes(){
     if(!r.alive)return;const co=i+1;
     const cs=rivalCards(co).filter(c=>RK[CARDS[c].name]&&(rg[c]??-99)+10<=S.m);
     for(const c of cs){
-      if(R()>=base)continue;rg[c]=S.m;
+      if(R()>=base||r.cash<1500)continue;rg[c]=S.m;r.cash-=800+Math.round(S.m*5);
       const C=CARDS[c],G=GAMBLE[C.name],gd=myCards().find(x=>CARDS[x.card].sk.some(k=>k[0]==='guard'));
       let res,kind;
       if(S.shield>S.m){kind='block';res='鉄壁の守りで計略をはね返した';}
@@ -535,23 +534,30 @@ function rivalSchemes(){
   });
 }
 function gKind(G){return G.kind||'kuse';}
+const CAPT=[[0,1],[10000,2],[100000,3],[1000000,4],[5000000,5]];
+function gambleCap(){const mx=(S.diff??1)>=3?3:(S.diff??1)===2?4:5;let n=1;CAPT.forEach(([v,k])=>{if(S.cash>=v)n=k;});return Math.min(n,mx);}
+function gambleNextTier(){const mx=(S.diff??1)>=3?3:(S.diff??1)===2?4:5,n=gambleCap();if(n>=mx)return null;const t=CAPT.find(([v,k])=>k===n+1);return t?t[0]:null;}
+function gUsed(){return S.gused&&S.gused.m===S.m?S.gused.n:0;}
+function gambleCost(c){const G=GAMBLE[CARDS[c].name];if(!G)return 0;return Math.round({kuse:200,mou:400,kei:800}[gKind(G)]*(1+S.office*.5)*(1+S.m/120)/10)*10;}
+function gambleBar(){const u=gUsed(),n=gambleCap(),nt=gambleNextTier();return `<div class="sum"><span>今月の策</span><b>${u}/${n}回${u>=n?'（使い切り）':''}</b><span>使える回数</span><b>${nt?`資金${fmt(nt)}以上で${n+1}回に`:'上限です'}</b></div>`;}
 function gambleState(c){
   const G=GAMBLE[CARDS[c].name];if(!G)return null;
   const gcd=S.gcd||(S.gcd={}),wait=(gcd[c]??-99)+6-S.m;
   let why='';if(G.need==='proj'&&!S.proj)why='開発中の作品があるときに使えます';else if(G.need==='games'&&!S.games.some(g=>g.active))why='販売中の作品があるときに使えます';else if((G.need==='rival'||G.kind==='kei')&&!S.rivals.some(r=>r.alive))why='ライバルがいないと使えません';
-  return {G,wait,why,ready:wait<=0&&!why};
+  const cost=gambleCost(c);if(!why&&wait<=0){if(gUsed()>=gambleCap())why=`今月はもう策を使えません（${gambleCap()}回まで）`;else if(S.cash<cost)why=`資金が足りません（${fmt(cost)}必要）`;}
+  return {G,wait,why,cost,ready:wait<=0&&!why};
 }
 function runGamble(c,co){
   const st=gambleState(c);if(!st||!st.ready)return;const G=st.G,C=CARDS[c],ok=R()<G.p,r=co?S.rivals[co-1]:null;
   if(gKind(G)==='kei'&&(!r||!r.alive))return;
-  S.gcd[c]=S.m;const eff=ok?G.win(r):G.lose(r);
+  S.cash-=st.cost;S.gused={m:S.m,n:gUsed()+1};S.gcd[c]=S.m;const eff=ok?G.win(r):G.lose(r);
   const wl=gKind(G)==='kuse'?(ok?'大成功！':'大失敗…'):(ok?'成功！':'失敗…');
   log(`${C.name}「${G.n}」${r?`（${r.name}へ）`:''}${wl} ${eff}`,ok?'hi':'bad');
-  if(!SIM)Q.push({title:`${KIND[gKind(G)]}「${G.n}」`,html:`${ill(!ok&&ILL['gf_'+gKind(G)]?'gf_'+gKind(G):'g_'+C.name)}${cardHead(c)}${r?`<p class="center" style="margin-top:-4px">標的：<b>${r.name}</b></p>`:''}<div class="big pop" style="color:${ok?'var(--good)':'var(--bad)'}">${wl}</div><p class="center">${ok?G.ok:G.ng}</p><div class="sum"><span>結果</span><b>${eff}</b></div>${ok?ill('g_cheers','band'):''}`,btns:[{t:'OK',c:'pri',f:()=>{}}],snd:ok?'million':'bad'});
+  if(!SIM)Q.push({title:`${KIND[gKind(G)]}「${G.n}」`,html:`${ill(!ok&&ILL['gf_'+gKind(G)]?'gf_'+gKind(G):'g_'+C.name)}${cardHead(c)}${r?`<p class="center" style="margin-top:-4px">標的：<b>${r.name}</b></p>`:''}<div class="big pop" style="color:${ok?'var(--good)':'var(--bad)'}">${wl}</div><p class="center">${ok?G.ok:G.ng}</p><div class="sum"><span>結果</span><b>${eff}</b><span>費用</span><b>-${fmt(st.cost)}</b><span>今月の策</span><b>${gUsed()}/${gambleCap()}回</b></div>${ok?ill('g_cheers','band'):''}`,btns:[{t:'OK',c:'pri',f:()=>{}}],snd:ok?'million':'bad'});
 }
 function gambleHTML(c){
   const st=gambleState(c);if(!st)return '';const G=st.G;
-  const k=gKind(G),act=k==='kei'?`<div class="btns">${S.rivals.map((r,i)=>r.alive?`<button class="btn sm red" type="button" data-gam="${c}:${i+1}">${r.name}に仕掛ける</button>`:'').join('')}</div>`:`<button class="btn sm ${k==='kuse'?'red':'pri'}" type="button" data-gam="${c}:0">${k==='kuse'?C_NAME(c)+'に任せてみる':'秘策を使う'}</button>`;
+  const k=gKind(G),act=k==='kei'?`<div class="btns">${S.rivals.map((r,i)=>r.alive?`<button class="btn sm red" type="button" data-gam="${c}:${i+1}">${r.name}に仕掛ける（${fmt(st.cost)}）</button>`:'').join('')}</div>`:`<button class="btn sm ${k==='kuse'?'red':'pri'}" type="button" data-gam="${c}:0">${k==='kuse'?C_NAME(c)+'に任せてみる':'秘策を使う'}（${fmt(st.cost)}）</button>`;
   return `<div class="gam ${k}">${ill('g_'+CARDS[c].name,'sm')}<div class="gh"><b>${KIND[k]}「${G.n}」</b><span class="num">成功率 ${Math.round(G.p*100)}%</span></div><div class="gr"><span class="ok">成功：${G.ds}</span><span class="ng">失敗：${G.df}</span></div>${st.wait>0?`<span class="sub">あと${st.wait}ヶ月で使えます</span>`:st.why?`<span class="sub">${st.why}</span>`:act}</div>`;
 }
 const C_NAME=c=>CARDS[c].name;
@@ -1206,7 +1212,7 @@ function render(){
       ${[['plan','企','新作企画'],['scout','将','スカウト'],['ads','宣','宣伝'],['staff','人','社員'],['hire','募','求人'],['lab','研','研究'],['office','城','オフィス'],['rivals','敵','情勢']].map(([a,ic,n])=>`<button class="act" data-a="${a}" type="button"><span class="ic">${ic}</span>${n}</button>`).join('')}
     </section>
     <section class="staffline"><div class="faces">${S.staff.slice().sort((a,b)=>(b.card!=null)-(a.card!=null)).slice(0,9).map(faceHTML).join('')}</div>
-      ${(()=>{const n=myCards().filter(s=>{const g=gambleState(s.card);return g&&g.ready;}).length;return n?`<button class="chip gold" data-a="staff" type="button" style="border:0">武将の秘策・計略 ${n}件 使える</button>`:'';})()}<span>社員 <b class="num">${S.staff.length}/${cap}</b>人 · 平均 企画${avg[0]} 技術${avg[1]} 演出${avg[2]} · ファン ${fmtFans(S.fans)}</span></section>
+      ${(()=>{const n=myCards().filter(s=>{const g=gambleState(s.card);return g&&g.ready;}).length;return n?`<button class="chip gold" data-a="staff" type="button" style="border:0">武将の秘策・計略 ${n}件 使える（今月 残り${gambleCap()-gUsed()}回）</button>`:'';})()}<span>社員 <b class="num">${S.staff.length}/${cap}</b>人 · 平均 企画${avg[0]} 技術${avg[1]} 演出${avg[2]} · ファン ${fmtFans(S.fans)}</span></section>
     <section class="news"><h3>ニュース</h3>${S.log.slice(0,8).map(l=>`<div class="nl ${l.c}"><span class="d">${yearOf(l.m)}年${calM(l.m)}月</span><span>${l.txt}</span></div>`).join('')}</section>`;
   $('next').hidden=!!SH;
   renderSaveTag();
@@ -1285,7 +1291,7 @@ function renderSheet(){
         <div class="list">${ADS.map(a=>{const u=used.includes(a.id);return `<div class="item"><div class="hd"><b>${a.n}</b><span class="r num">${fmt(a.cost)}</span></div><div class="sub">話題性 +${adGain(a)}</div>${u?'<span class="done">今月は実施済み</span>':`<div><button class="btn sm pri" type="button" data-ad="${a.id}" ${S.cash>=a.cost?'':'disabled'}>実施する</button></div>`}</div>`;}).join('')}</div>`);
     }
   }else if(SH==='staff'){
-    h=sheetWrap(`社員 ${S.staff.length}/${staffCap()}人`,`<p>武将には忠誠度があります。高いほどライバルの引き抜きを自分から断り、25を切ると去ってしまうことがあります。褒美・ボーナス・社員旅行で上がります。研修は1人につき月1回。開発に参加すると、ジャンルに合った能力が少しずつ伸びます。</p>
+    h=sheetWrap(`社員 ${S.staff.length}/${staffCap()}人`,`${myCards().some(s=>GAMBLE[CARDS[s.card].name])?gambleBar():''}<p>秘策・計略・諸刃の剣は、合わせて1ヶ月に使える回数が決まっていて、使うたびに費用がかかります。資金が増えるほど回数が増えます。武将には忠誠度があります。高いほどライバルの引き抜きを自分から断り、25を切ると去ってしまうことがあります。褒美・ボーナス・社員旅行で上がります。研修は1人につき月1回。開発に参加すると、ジャンルに合った能力が少しずつ伸びます。</p>
       <div class="list">${S.staff.map((s,i)=>`<div class="item">${s.card!=null?`${cardHead(s.card)}<div class="sub"><span>月給 ${fmt(s.sal)}</span></div>${loyHTML(s.card,loyOf(s.card)<25?'離反の危険！':'')}${s.rew===S.m?'<span class="done">今月は褒美を与えた</span>':`<div><button class="btn sm" type="button" data-rew="${i}" ${S.cash>=rewardCost(s)?'':'disabled'}>褒美を与える（${fmt(rewardCost(s))}・忠誠+15）</button></div>`}`:`<div class="hd"><span class="face" style="--c:${s.c};margin:0">${esc(s.name[0])}</span><b>${esc(s.name)}</b><span class="r num">${s.pres?'役員報酬なし':'月給 '+fmt(s.sal)}</span></div>`}
         ${statBars(stOf(s))}${s.card!=null?`<div class="skl${CARDS[s.card].trait?' bad':''}">${skillTxt(s.card)}</div>${gambleHTML(s.card)}`:''}
         ${s.trained===S.m?'<span class="done">今月は研修済み</span>':`<div class="btns">${['企画','技術','演出'].map((n,a)=>`<button class="btn sm" type="button" data-tr="${i}:${a}" ${S.cash>=trainCost(s)?'':'disabled'}>${n}研修</button>`).join('')}<span class="sub" style="font-size:11px;color:var(--muted);align-self:center">${fmt(trainCost(s))}</span></div>`}
@@ -1475,5 +1481,4 @@ if(!SIM){
   if(hot&&hot.ready)hot.ready(boot);else boot((hot&&hot.data)||{});
 }
 </script>
-
 </body></html>
